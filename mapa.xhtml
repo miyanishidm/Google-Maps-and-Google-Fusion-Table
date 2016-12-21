@@ -1,0 +1,281 @@
+<ui:define name="head">
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBBgD_40b1_eAjqP3misooowS7dCLYAKeI&amp;libraries=geometry,visualization,geometry;"></script>
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+
+<script type="text/javascript">
+function bodyLoaded() {
+    initializeMapDraw();
+}
+</script>
+
+<script type="text/javascript">
+
+google.load('visualization', '1');
+var geocoder;
+var poly1;
+var whereClause = '';
+var NAME;
+var bstores = true;
+var bdist = true;
+var rdistance = 0;
+var status = new Array();
+var geometryMsos = new Array();
+var storeMarker = 0;
+var storeMarkerCoverage = 0;
+var markerCep = null;
+var oldmap = new Array();
+var bCobertura = 0;
+var myLatLng1 = 0;
+var infoWindow;
+var overlayG;
+var isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+var isSafari = /Safari/.test(navigator.userAgent) && /Apple Computer/.test(navigator.vendor);
+
+
+
+//Inicializando Mapa
+function initializeMapListeners() {
+    var map = mapVar.getMap();
+}
+
+//Pintando o Mapa
+function initializeMapDraw() {
+    infoWindow = new google.maps.InfoWindow();
+
+    var map = mapVar.getMap(),
+    bounds = new google.maps.LatLngBounds();
+
+    this.overlay_ = new cOverlay(bounds, map);
+    overlayG = this.overlay_;
+    var that = this;
+
+    google.maps.event.addListener(map, 'idle', function () {
+        that.overlay_.initRedraw = false;
+        that.overlay_.redraw(null, true);
+    });
+}
+//Criando SubMapas ou label
+laybo initializeMapStores() {
+    if (bstores == true) {
+        geometryStores.setMap(null);
+        var num = 0;
+        while (num <= storeMarker) {
+            marker[num].setMap(null);
+            num = num + 1;
+        }
+    } else {
+        loadingFullVar.show();
+        var field = 'CONTRATO,WO,LATLNG,NOME,ENDERECO,PERIODO,DURACAO,TIPO DE SERVICO,TELEFONE,TELEFONE2,OS,Area,FL_ATENDIMENTO,TECNICOS,Base';
+        geometryMsos = new google.maps.FusionTablesLayer({
+            query: {
+                select: field,
+                from: "1CIwotIbSJ32orTDpUx43KQc3aEdd-5kfJu6qHGVL",
+                where: whereClause,
+                key: "KEY"
+            },
+            styles : [ {
+                where : "FL_ATENDIMENTO='1'",
+                markerOptions : {
+                    iconName : "large_green"
+                }
+            }, {
+                where : "FL_ATENDIMENTO='2'",
+                markerOptions : {
+                    iconName : "large_yellow"
+                }
+            }, {
+                where : "FL_ATENDIMENTO='3'",
+                markerOptions : {
+                    iconName : "large_red"
+                }
+            } ]
+        });
+        geometryMsos.setMap(mapVar.getMap());
+        loadingFullVar.hide();
+    }
+}
+//função para sobrepor imagem no mapa com nivel de opacidade
+function cobertura(xhr, status, args) {
+    var selTech = args.tech;
+    var opacity = jQuery('#formSearch\\:accordionSearch\\:opacity').val();
+    opacity = opacity / 100;
+    NAME = JSON.parse(args.coverage);
+    bCobertura = NAME.length;
+    if (storeMarkerCoverage > 0) {
+        var num3 = 0;
+        while (num3 < storeMarkerCoverage) {
+            oldmap[num3].setMap(null);
+            num3 = num3 + 1;
+            ;
+        }
+        bCobertura = bCobertura - 2;
+    }
+    for (var i = 0; i < NAME.length; i++) {
+        var query = "SELECT NAME, IMAGE, north, south, east, west FROM 1ek3_o_CF7Ln7b2q7r_2v54jyOVLzFVTeqsu8jEJG where 'NAME'='" + NAME[i].name + "'";
+        query = encodeURIComponent(query);
+        var tmp = ('https://www.google.com/fusiontables/gvizdata?tq=' + query);
+        gvizQuery3 = new google.visualization.Query(tmp);
+
+        gvizQuery3.send(function (response2) {
+            var numRows = response2.getDataTable().getNumberOfRows();
+            for (var i = 0; i < numRows; i++) {
+                var NAME = response2.getDataTable().getValue(i, 0);
+                var IMAGE = response2.getDataTable().getValue(i, 1);
+                var north = response2.getDataTable().getValue(i, 2);
+                var south = response2.getDataTable().getValue(i, 3);
+                var east = response2.getDataTable().getValue(i, 4);
+                var west = response2.getDataTable().getValue(i, 5);
+                var srcImage = "resources/images/coberturas/" + IMAGE + "";
+                cobertura(srcImage, north, south, east, west);
+            }
+        });
+        var cobertura = function (IMAGE, north, south, east, west) {
+            var imageBounds = new google.maps.LatLngBounds(new google.maps.LatLng(south, west), new google.maps.LatLng(north, east));
+            var overlayOpts = {
+                opacity: opacity
+            }
+            oldmap[storeMarkerCoverage] = new google.maps.GroundOverlay(IMAGE, imageBounds, overlayOpts);
+            oldmap[storeMarkerCoverage].setMap(mapVar.getMap());
+            storeMarkerCoverage = storeMarkerCoverage + 1;
+        }
+    }
+}
+
+//função para calcular distancia
+function distance() {
+    bdist = !bdist;
+    if (bdist == true) {
+        if (poly1 != null) {
+            poly1.setMap(null);
+            $('#formWestId\\:acordionX\\:txt_distance').val("");
+        }
+    }
+}
+
+//função para busca por rua / cep
+function search(xhr, status, args) {
+    var gmap = mapVar.getMap();
+    var selTech = args.search;
+    var search2 = JSON.parse(args.search);
+
+    var tmp = search2[0].split(",");
+    var lat = parseFloat(tmp[0]);
+    var lng = parseFloat(tmp[1]);
+    gmap.setCenter(new google.maps.LatLng(lat, lng));
+    gmap.setZoom(16);
+
+}
+
+//função para pegar o ponto do click
+function handlePointClick(event) {
+    if (bdist == false) {
+        if (poly1 == null) {
+            if (rdistance == 1) {
+                var myLatLng = event.latLng;
+                var radlat1 = Math.PI * ((myLatLng1.lat()) / 180);
+                var radlat2 = Math.PI * ((myLatLng.lat()) / 180);
+                var radlon1 = Math.PI * ((myLatLng1.lng()) / 180);
+                var radlon2 = Math.PI * ((myLatLng.lng()) / 180);
+                var theta = (myLatLng1.lng()) - (myLatLng.lng());
+                var radtheta = Math.PI * theta / 180;
+                var dist = Math.sin(radlat1) * Math.sin(radlat2) + Math.cos(radlat1) * Math.cos(radlat2) * Math.cos(radtheta);
+                dist = Math.acos(dist);
+                dist = dist * 180 / Math.PI;
+                dist = dist * 60 * 1.1515 * 1.609344;
+                var dist2 = parseFloat(dist).toFixed(2);
+                var flightPlanCoordinates = [myLatLng1, myLatLng];
+                poly1 = new google.maps.Polyline({
+                    path: flightPlanCoordinates,
+                    strokeColor: '#FF0000',
+                    strokeOpacity: 1.0,
+                    strokeWeight: 3
+                });
+                rdistance = 0;
+                poly1.setMap(mapVar.getMap());
+                $('#formWestId\\:acordionX\\:txt_distance').val(dist2 + " Km");
+            } else {
+                myLatLng1 = event.latLng;
+                rdistance = rdistance + 1
+
+            }
+        } else {
+            poly1.setMap(null);
+            poly1 = null;
+            $('#formWestId\\:acordionX\\:txt_distance').val("");
+            myLatLng1 = event.latLng;
+            rdistance = rdistance + 1
+        }
+    } else {
+        if (poly1 != null) {
+            poly1.setMap(null);
+            $('#formWestId\\:acordionX\\:txt_distance').val("");
+        }
+
+    }
+
+}
+
+//função para pegar o cep e da um zoom no mapa
+function codeCep(text) {
+    var gmap = mapVar.getMap();
+    var addres = cepidVar.jq;
+    var address = addres[0].value;
+    if (address != "") {
+        if (address != "_____-___") {
+            var address = "cep: " + addres[0].value;
+            geocoder = new google.maps.Geocoder();
+            if (markerCep != null) {
+                markerCep.setMap(null);
+            }
+            geocoder.geocode({
+                'address': address,
+                region: 'BR'
+            }, function (results, status) {
+                if (status == google.maps.GeocoderStatus.OK) {
+                    gmap.setCenter(results[0].geometry.location);
+                    gmap.setZoom(17);
+                    markerCep = new google.maps.Marker({
+                        map: mapVar.getMap(),
+                        position: results[0].geometry.location
+                    });
+                } else {
+                    alert("Tracker was not successful for the following reason: " + status);
+                }
+            });
+        }
+    }
+}
+
+//função para pegar o endereço digitado e dar um zoom no mapa
+function codeAddress(text) {
+    var gmap = mapVar.getMap();
+    var addres = addressidVar.jq;
+    var address = addres[0].value;
+    if (address != "") {
+        geocoder = new google.maps.Geocoder();                    
+        if (markerCep != null) {
+            markerCep.setMap(null);
+        }
+        geocoder.geocode({
+            'address': address,
+            region: 'BR'
+        }, function (results, status) {
+            if (status == google.maps.GeocoderStatus.OK) {
+                gmap.setCenter(results[0].geometry.location);
+                gmap.setZoom(17);
+                markerCep = new google.maps.Marker({
+                    map: mapVar.getMap(),
+                    position: results[0].geometry.location
+                });
+            } else {
+                alert("Tracker was not successful for the following reason: " + status);
+            }
+        });
+
+        function SearchBoxFunc(Obj) {
+            $('#formSearch\\:accordionSearch\\:addressid').val(Obj);
+        }
+    }
+}
+</script>
+</ui:define>
